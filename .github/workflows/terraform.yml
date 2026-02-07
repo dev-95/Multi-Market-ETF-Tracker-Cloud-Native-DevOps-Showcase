@@ -26,3 +26,10 @@ jobs:
 
     - name: Terraform Plan
       run: terraform plan
+
+    - name: Terraform Plan
+      run: terraform plan
+
+        # ADD THIS STEP BELOW
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
