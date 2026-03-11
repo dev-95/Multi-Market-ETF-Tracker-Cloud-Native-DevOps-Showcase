@@ -1,53 +1,121 @@
-📈 Multi-Market ETF Tracker: A DevOps Showcase
-📖 Project Overview
-This project is a fully automated, cloud-native application designed to track real-time price data for specific Indian and Canadian ETFs (e.g., Reliance, Nifty 50, and VFV.TO).
+# 📈 Multi-Market ETF Tracker: A DevOps Showcase
 
-The focus of this repository is not just the Python application, but the DevOps lifecycle: from local development and containerization to automated infrastructure provisioning using Infrastructure as Code (IaC).
+> A fully automated, cloud-native application that tracks real-time price data for Indian and Canadian ETFs — built to demonstrate a complete DevOps lifecycle from local development to cloud deployment.
 
-🏗️ Architecture & Workflow
-Develop: Python script monitors financial markets using real-time APIs.
+---
 
-Package: Application is containerized using Docker for environment parity.
+## 📖 Project Overview
 
-Ship: Images are versioned and pushed to Docker Hub (devesh0905/etf-tracker).
+This project monitors real-time market data for selected ETFs including **Reliance**, **Nifty 50**, and **VFV.TO** (Canadian market).
 
-Provision: Terraform creates the Azure Resource Group, VNet, and Linux Web App in canadacentral.
+The focus of this repository is not just the Python application itself, but the **end-to-end DevOps lifecycle**: from local development and containerization, to automated cloud infrastructure provisioning using Infrastructure as Code (IaC).
 
-Automate: (Optional) Integrated with GitHub Actions for automated infrastructure updates.
+---
 
-🛠️ Tech Stack
-Language: Python 3.x
+## 🏗️ Architecture & Workflow
 
-Infrastructure: Terraform
+```
+Develop → Package → Ship → Provision → Automate
+```
 
-Containerization: Docker
+| Stage | Description |
+|-------|-------------|
+| **Develop** | Python script monitors financial markets using real-time APIs |
+| **Package** | Application is containerized with Docker for environment parity |
+| **Ship** | Versioned images pushed to Docker Hub (`devesh0905/etf-tracker`) |
+| **Provision** | Terraform creates Azure Resource Group, VNet, and Linux Web App in `canadacentral` |
+| **Automate** | *(Optional)* GitHub Actions integration for automated infrastructure updates |
 
-Registry: Docker Hub
+---
 
-Cloud Provider: Microsoft Azure (App Services)
+## 🛠️ Tech Stack
 
-🧪 Lessons Learned & Troubleshooting
-Recruiters value problem-solving. During this project, I overcame two major architectural hurdles:
+| Layer | Technology |
+|-------|------------|
+| Language | Python 3.x |
+| Containerization | Docker |
+| Container Registry | Docker Hub |
+| Infrastructure (IaC) | Terraform |
+| Cloud Provider | Microsoft Azure (App Services) |
+| CI/CD | GitHub Actions *(optional)* |
 
-1. Navigating Regional Cloud Quotas
-Challenge: Faced 401 Unauthorized errors when deploying to eastus due to subscription-level limitations on Free Tier (F1) resources.
+---
 
-Solution: Refactored Terraform code to migrate the entire stack to canadacentral, ensuring 100% resource availability while remaining within the free tier budget.
+## 🚀 Deployment Guide
 
-2. Resolving Docker Registry Pathing
-Challenge: Azure App Service logs reported BadRequest and invalid reference format during the image pull phase.
+### Prerequisites
+- Azure CLI installed and authenticated (`az login`)
+- Docker installed and running
+- Terraform installed (`>= 1.0`)
+- Docker Hub account
 
-Solution: Identified a syntax conflict where Azure was prepending extra slashes to the image name. I resolved this by explicitly defining the Docker V1 Registry URL (https://index.docker.io/v1) within the Terraform application_stack block.
+### Step 1 — Build & Push the Docker Image
 
-🚀 Deployment Guide
-1. Build and Push Application
-Bash
+```bash
 docker build -t etf-tracker .
 docker tag etf-tracker devesh0905/etf-tracker:latest
 docker push devesh0905/etf-tracker:latest
-2. Provision Infrastructure
-Bash
+```
+
+### Step 2 — Provision Azure Infrastructure
+
+```bash
 terraform init
 terraform apply -auto-approve
-📈 Monitoring
-The application's real-time logs can be monitored through the Azure Portal Log Stream. Upon startup, the container successfully pulls the latest image and outputs live market data directly to the console.
+```
+
+---
+
+## 📊 Monitoring
+
+Application logs can be monitored in real-time via the **Azure Portal Log Stream**.
+
+Upon startup, the container pulls the latest image and outputs live ETF market data directly to the console.
+
+---
+
+## 🧪 Troubleshooting & Lessons Learned
+
+Real-world cloud deployments rarely go smoothly. Here are two major architectural hurdles encountered and resolved during this project:
+
+### 1. Navigating Regional Cloud Quotas
+
+**Challenge:** Encountered `401 Unauthorized` errors when deploying to `eastus` due to subscription-level limitations on Free Tier (F1) resources.
+
+**Solution:** Refactored Terraform configuration to migrate the entire stack to `canadacentral`, ensuring 100% resource availability while remaining within free tier budget constraints.
+
+---
+
+### 2. Resolving Docker Registry Path Conflict
+
+**Challenge:** Azure App Service logs reported `BadRequest` and `invalid reference format` errors during the Docker image pull phase.
+
+**Solution:** Identified a syntax conflict where Azure was prepending extra slashes to the image name. Resolved by explicitly defining the Docker V1 Registry URL (`https://index.docker.io/v1`) within the Terraform `application_stack` block.
+
+```hcl
+application_stack {
+  docker_registry_url = "https://index.docker.io/v1"
+  docker_image_name   = "devesh0905/etf-tracker:latest"
+}
+```
+
+---
+
+## 📁 Project Structure
+
+```
+.
+├── main.tf               # Core Terraform resources (App Service, VNet, RG)
+├── providers.tf          # AzureRM provider configuration
+├── Dockerfile            # Container definition
+├── app.py                # Python ETF tracking script
+└── .gitignore            # Excludes .tfstate, secrets, and keys
+```
+
+---
+
+## 👤 Author
+
+**Devesh Chowdary Chalasani**  
+Cloud & DevOps Engineer  
+[LinkedIn](https://linkedin.com/in/) • [Docker Hub](https://hub.docker.com/u/devesh0905)
