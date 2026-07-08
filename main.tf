@@ -1,6 +1,6 @@
 resource "azurerm_resource_group" "portfolio_rg" {
   name     = "portfolio-resources"
-  location = "canadacentral" 
+  location = "canadacentral"
 }
 
 resource "azurerm_virtual_network" "main_vnet" {
@@ -26,12 +26,12 @@ resource "azurerm_linux_web_app" "etf_app" {
   location            = azurerm_resource_group.portfolio_rg.location
   service_plan_id     = azurerm_service_plan.app_plan.id
 
- site_config {
+  site_config {
     always_on = false
     application_stack {
       # This is the cleanest way to reference a public Docker Hub image
       docker_image_name   = "devesh0905/etf-tracker:latest"
-      docker_registry_url = "https://index.docker.io" 
+      docker_registry_url = "https://index.docker.io"
     }
   }
 }
