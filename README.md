@@ -1,6 +1,6 @@
 # 📈 Multi-Market ETF Tracker: A DevOps Showcase
 
-> A fully automated, cloud-native application that tracks real-time price data for Indian and Canadian ETFs — built to demonstrate a complete DevOps lifecycle from local development to cloud deployment.
+> A fully automated, cloud-native application that tracks real-time price data for 7 major global market indexes (NIFTY 50, S&P/TSX, S&P 500, Nikkei 225, KOSPI, Hang Seng, Euro Stoxx 50) — built to demonstrate a complete DevOps lifecycle from local development to cloud deployment.
 
 ---
 
@@ -38,7 +38,7 @@ Develop → Test → Package → Ship → Provision → Automate
 | **Package** | Application is containerized with Docker for environment parity |
 | **Ship** | Versioned images pushed to Docker Hub (`devesh0905/etf-tracker`), tagged with both `latest` and git SHA |
 | **Provision** | Terraform creates Azure Resource Group, VNet, and Linux Web App in `canadacentral` |
-| **Automate** | GitHub Actions runs three jobs in sequence on every push to `main`: **tests → Docker build/push → Terraform fmt/validate/plan/apply**. A failing test blocks the Docker build entirely — broken code never reaches deployment |
+| **Automate** | GitHub Actions runs three jobs in sequence on every push to `main`: **tests → Docker build/push → Terraform fmt/validate/plan** (read-only). A failing test blocks the Docker build entirely. `terraform apply` is run manually by the developer — ephemeral CI runners can't share local Terraform state |
 
 ---
 
@@ -227,7 +227,7 @@ application_stack {
 ```
 .
 ├── main.tf                        # Core Terraform resources (App Service, VNet, RG)
-├── providers.tf                   # AzureRM provider + remote backend config
+├── providers.tf                   # AzureRM provider configuration (local state)
 ├── variables.tf                   # Input variables (location, app name, SKU, image)
 ├── .gitignore                     # Excludes .tfstate, .env, __pycache__, .terraform/
 ├── .env.example                   # Required environment variable keys (no secrets)
