@@ -6,7 +6,7 @@
 
 ## 📖 Project Overview
 
-This project monitors real-time market data for selected ETFs including **Reliance**, **Nifty 50**, **VFV.TO**, and **CPX.TO** (Canadian market).
+This project monitors real-time market data for 7 major global indexes: **NIFTY 50** (India), **S&P/TSX Composite** (Canada), **S&P 500** (US), **Nikkei 225** (Japan), **KOSPI** (South Korea), **Hang Seng** (Hong Kong), and **Euro Stoxx 50** (Europe).
 
 The application is a **Flask web service** (served via gunicorn) with two HTTP endpoints: a `/` route that returns live ETF market data as JSON, and a `/health` route for App Service health checks. It is deployed as an Azure Linux Web App, pulling a Docker image from Docker Hub.
 
@@ -97,10 +97,13 @@ curl https://etf-tracker-app-dev-95.azurewebsites.net/health
 The `/` endpoint returns a JSON array like:
 ```json
 [
-  {"ticker": "RELIANCE.NS", "price": 1275.90, "change_pct": -2.48},
-  {"ticker": "NIFTYBEES.NS", "price": 271.69, "change_pct": -1.93},
-  {"ticker": "VFV.TO",       "price": 187.94, "change_pct": -0.42},
-  {"ticker": "CPX.TO",       "price": 74.40,  "change_pct":  2.04}
+  {"ticker": "^NSEI",     "price": 23962.80, "change_pct":  0.34, "market_status": "open"},
+  {"ticker": "^GSPTSE",   "price": 35226.77, "change_pct":  0.83, "market_status": "open"},
+  {"ticker": "^GSPC",     "price":  7530.95, "change_pct":  0.64, "market_status": "open"},
+  {"ticker": "^N225",     "price": 66819.05, "change_pct": -2.11, "market_status": "closed"},
+  {"ticker": "^KS11",     "price":  7246.79, "change_pct": -5.35, "market_status": "closed"},
+  {"ticker": "^HSI",      "price": 24199.46, "change_pct":  2.99, "market_status": "closed"},
+  {"ticker": "^STOXX50E", "price":  6284.27, "change_pct":  1.28, "market_status": "open"}
 ]
 ```
 
@@ -122,13 +125,13 @@ pytest app/test_tracker.py -v
 | Test | What it verifies |
 |------|-----------------|
 | `test_market_summary_returns_200` | `GET /` returns HTTP 200 |
-| `test_market_summary_returns_json_array` | Response is a JSON array with all 4 tickers and correct keys |
+| `test_market_summary_returns_json_array` | Response is a JSON array with all 7 tickers and correct keys |
 | `test_health_returns_200` | `GET /health` returns HTTP 200 |
 | `test_metrics_returns_200` | `GET /metrics` returns HTTP 200 |
 | `test_metrics_contains_expected_metric_names` | Prometheus output contains `etf_requests_total` and `etf_ticker_fetch_success` |
 | `test_one_failed_ticker_still_returns_200` | One bad ticker fetch does not crash the endpoint |
 | `test_failed_ticker_has_error_field` | Failed ticker gets an `"error"` key with no `"price"` key |
-| `test_other_tickers_unaffected_by_one_failure` | The remaining 3 tickers still return valid price data |
+| `test_other_tickers_unaffected_by_one_failure` | The remaining 6 tickers still return valid price data |
 
 In CI, the test job runs first. If any test fails, the Docker build and Terraform apply are skipped entirely.
 

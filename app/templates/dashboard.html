@@ -96,11 +96,17 @@
     }
 
     .ticker {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      letter-spacing: 0.04em;
       color: #c9d1d9;
+    }
+
+    .ticker-raw {
+      font-size: 0.65rem;
+      color: #484f58;
+      letter-spacing: 0.03em;
+      margin-top: 0.1rem;
     }
 
     .badge {
@@ -115,12 +121,31 @@
       padding: 0.15rem 0.4rem;
     }
 
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+    }
+
     .price {
       font-size: 2rem;
       font-weight: 700;
       letter-spacing: -0.02em;
       color: #e6edf3;
       line-height: 1;
+    }
+
+    .closed-badge {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6e7681;
+      background: #1c2128;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+      vertical-align: middle;
     }
 
     .card.unavailable .price {
@@ -160,11 +185,30 @@
   <footer>Auto-refreshes every 30s &middot; Data via Yahoo Finance</footer>
 
   <script>
-    const TICKERS = ["RELIANCE.NS", "NIFTYBEES.NS", "VFV.TO", "CPX.TO"];
+    const TICKERS = ["^NSEI", "^GSPTSE", "^GSPC", "^N225", "^KS11", "^HSI", "^STOXX50E"];
 
-    function marketBadge(ticker) {
-      return ticker.endsWith(".NS") ? "NSE" : ticker.endsWith(".TO") ? "TSX" : "";
-    }
+    const DISPLAY = {
+      "^NSEI":     "NIFTY 50",
+      "^GSPTSE":   "S&P/TSX",
+      "^GSPC":     "S&P 500",
+      "^N225":     "Nikkei 225",
+      "^KS11":     "KOSPI",
+      "^HSI":      "Hang Seng",
+      "^STOXX50E": "Euro Stoxx 50",
+    };
+
+    const BADGE = {
+      "^NSEI":     "NSE",
+      "^GSPTSE":   "TSX",
+      "^GSPC":     "S&P 500",
+      "^N225":     "Nikkei",
+      "^KS11":     "KOSPI",
+      "^HSI":      "HSI",
+      "^STOXX50E": "STOXX50",
+    };
+
+    function displayName(ticker) { return DISPLAY[ticker] || ticker; }
+    function marketBadge(ticker) { return BADGE[ticker] || ""; }
 
     function buildSkeletons() {
       const grid = document.getElementById("grid");
@@ -174,7 +218,7 @@
         card.id = "card-" + t;
         card.innerHTML = `
           <div class="card-header">
-            <div class="ticker">${t}</div>
+            <div><div class="ticker">${displayName(t)}</div><div class="ticker-raw">${t}</div></div>
             <div class="badge">${marketBadge(t)}</div>
           </div>
           <div class="price">—</div>
@@ -190,10 +234,12 @@
 
       const badge = `<div class="badge">${marketBadge(data.ticker)}</div>`;
 
+      const nameHtml = `<div><div class="ticker">${displayName(data.ticker)}</div><div class="ticker-raw">${data.ticker}</div></div>`;
+
       if (data.error) {
         card.classList.add("unavailable");
         card.innerHTML = `
-          <div class="card-header"><div class="ticker">${data.ticker}</div>${badge}</div>
+          <div class="card-header">${nameHtml}${badge}</div>
           <div class="price">Unavailable</div>
           <div class="change neutral">—</div>`;
         return;
@@ -205,9 +251,12 @@
       const sign = pct > 0 ? "+" : "";
       if (dir !== "neutral") card.classList.add(dir);
 
+      const closedBadge = data.market_status === "closed"
+        ? `<span class="closed-badge">Closed</span>` : "";
+
       card.innerHTML = `
-        <div class="card-header"><div class="ticker">${data.ticker}</div>${badge}</div>
-        <div class="price">${data.price.toLocaleString()}</div>
+        <div class="card-header">${nameHtml}${badge}</div>
+        <div class="price-row"><div class="price">${data.price.toLocaleString()}</div>${closedBadge}</div>
         <div class="change ${dir}"><span class="arrow">${arrow}</span>${sign}${pct.toFixed(2)}%</div>`;
     }
 
