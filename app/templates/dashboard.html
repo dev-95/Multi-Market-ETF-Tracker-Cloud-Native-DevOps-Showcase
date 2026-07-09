@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETF Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      width: 100%;
+      max-width: 960px;
+      border-bottom: 1px solid #21262d;
+      padding-bottom: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: #e6edf3;
+    }
+
+    header h1 span { color: #58a6ff; }
+
+    #last-updated {
+      font-size: 0.78rem;
+      color: #6e7681;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .card {
+      background: linear-gradient(160deg, #1a2030 0%, #161b22 100%);
+      border: 1px solid #21262d;
+      border-left: 5px solid #21262d;
+      border-radius: 10px;
+      padding: 1.5rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.2);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .card:hover {
+      border-color: #30363d;
+      border-left-color: inherit;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .card.positive { border-left-color: #3fb950; }
+    .card.negative { border-left-color: #f85149; }
+
+    .card.loading {
+      opacity: 0.4;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    .card.unavailable {
+      opacity: 0.45;
+      border-left-color: #21262d !important;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 0.2; }
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ticker {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #c9d1d9;
+    }
+
+    .badge {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #8b949e;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+    }
+
+    .price {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #e6edf3;
+      line-height: 1;
+    }
+
+    .card.unavailable .price {
+      font-size: 1rem;
+      font-weight: 400;
+      color: #6e7681;
+    }
+
+    .change {
+      font-size: 0.88rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .change.positive { color: #3fb950; }
+    .change.negative { color: #f85149; }
+    .change.neutral  { color: #6e7681; }
+
+    .arrow { font-size: 0.75rem; }
+
+    footer {
+      margin-top: 2.5rem;
+      font-size: 0.72rem;
+      color: #484f58;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ETF <span>Tracker</span></h1>
+    <span id="last-updated">Loading…</span>
+  </header>
+  <div id="grid"></div>
+  <footer>Auto-refreshes every 30s &middot; Data via Yahoo Finance</footer>
+
+  <script>
+    const TICKERS = ["RELIANCE.NS", "NIFTYBEES.NS", "VFV.TO", "CPX.TO"];
+
+    function marketBadge(ticker) {
+      return ticker.endsWith(".NS") ? "NSE" : ticker.endsWith(".TO") ? "TSX" : "";
+    }
+
+    function buildSkeletons() {
+      const grid = document.getElementById("grid");
+      TICKERS.forEach(t => {
+        const card = document.createElement("div");
+        card.className = "card loading";
+        card.id = "card-" + t;
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="ticker">${t}</div>
+            <div class="badge">${marketBadge(t)}</div>
+          </div>
+          <div class="price">—</div>
+          <div class="change neutral">—</div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    function renderCard(data) {
+      const card = document.getElementById("card-" + data.ticker);
+      if (!card) return;
+      card.classList.remove("loading", "unavailable", "positive", "negative");
+
+      const badge = `<div class="badge">${marketBadge(data.ticker)}</div>`;
+
+      if (data.error) {
+        card.classList.add("unavailable");
+        card.innerHTML = `
+          <div class="card-header"><div class="ticker">${data.ticker}</div>${badge}</div>
+          <div class="price">Unavailable</div>
+          <div class="change neutral">—</div>`;
+        return;
+      }
+
+      const pct = data.change_pct;
+      const dir = pct > 0 ? "positive" : pct < 0 ? "negative" : "neutral";
+      const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "";
+      const sign = pct > 0 ? "+" : "";
+      if (dir !== "neutral") card.classList.add(dir);
+
+      card.innerHTML = `
+        <div class="card-header"><div class="ticker">${data.ticker}</div>${badge}</div>
+        <div class="price">${data.price.toLocaleString()}</div>
+        <div class="change ${dir}"><span class="arrow">${arrow}</span>${sign}${pct.toFixed(2)}%</div>`;
+    }
+
+    function setTimestamp() {
+      document.getElementById("last-updated").textContent =
+        "Updated " + new Date().toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch("/");
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        data.forEach(renderCard);
+        setTimestamp();
+      } catch (e) {
+        document.getElementById("last-updated").textContent = "Fetch failed — retrying…";
+      }
+    }
+
+    buildSkeletons();
+    refresh();
+    setInterval(refresh, 30000);
+  </script>
+</body>
+</html>

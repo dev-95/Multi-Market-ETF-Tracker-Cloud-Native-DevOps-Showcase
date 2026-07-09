@@ -1,6 +1,6 @@
 import logging
 import time
-from flask import Flask, jsonify, Response
+from flask import Flask, jsonify, Response, render_template
 import yfinance as yf
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
@@ -44,6 +44,11 @@ def market_summary():
             TICKER_STATUS.labels(ticker=symbol).set(0)
     REQUEST_LATENCY.observe(time.time() - start)
     return jsonify(results)
+
+
+@app.get("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
 
 
 @app.get("/health")
