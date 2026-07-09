@@ -1,0 +1,16 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: Telegram
+    receivers:
+      - uid: telegram-etf
+        type: telegram
+        settings:
+          bottoken: ${TELEGRAM_BOT_TOKEN}
+          chatid: ${TELEGRAM_CHAT_ID}
+          message: |
+            🚨 *ETF Alert*: `{{ $labels.ticker }}` fetch failed.
+            The ticker has been unreachable for over 1 minute.
+            Resolved automatically when fetches succeed again.
+        disableResolveMessage: false

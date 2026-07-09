@@ -1,0 +1,60 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: ETF Ticker Alerts
+    folder: ETF Tracker
+    interval: 1m
+    rules:
+      - uid: etf-ticker-failure
+        title: Ticker Fetch Failure
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus-etf
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus-etf
+              expr: etf_ticker_fetch_success
+              instant: false
+              range: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: "-100"
+            model:
+              type: threshold
+              datasource:
+                type: __expr__
+                uid: "-100"
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+                    params: []
+                  type: query
+              expression: A
+              refId: B
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ticker {{ $labels.ticker }} fetch failed"
+          description: "{{ $labels.ticker }} has been unreachable for over 1 minute."
+        isPaused: false
