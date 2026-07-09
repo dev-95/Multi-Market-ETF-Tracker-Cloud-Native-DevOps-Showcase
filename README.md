@@ -26,16 +26,17 @@ The focus of this repository is not just the Python application itself, but the 
 ## 🏗️ Architecture & Workflow
 
 ```
-Develop → Package → Ship → Provision → Automate
+Develop → Test → Package → Ship → Provision → Automate
 ```
 
 | Stage | Description |
 |-------|-------------|
 | **Develop** | Flask web service monitors financial markets using real-time APIs and returns JSON responses |
+| **Test** | pytest suite (8 tests) runs against mocked yfinance calls — no network dependency |
 | **Package** | Application is containerized with Docker for environment parity |
 | **Ship** | Versioned images pushed to Docker Hub (`devesh0905/etf-tracker`), tagged with both `latest` and git SHA |
 | **Provision** | Terraform creates Azure Resource Group, VNet, and Linux Web App in `canadacentral` |
-| **Automate** | GitHub Actions runs on every push to `main`: builds and pushes the Docker image, then runs `terraform fmt/validate/plan/apply` automatically |
+| **Automate** | GitHub Actions runs three jobs in sequence on every push to `main`: **tests → Docker build/push → Terraform fmt/validate/plan/apply**. A failing test blocks the Docker build entirely — broken code never reaches deployment |
 
 ---
 
@@ -46,6 +47,10 @@ Develop → Package → Ship → Provision → Automate
 | Language | Python 3.11 |
 | Web Framework | Flask |
 | WSGI Server | gunicorn |
+| Testing | pytest, pytest-mock |
+| Metrics | Prometheus (`prometheus-client`) |
+| Observability UI | Grafana |
+| Alerting | Grafana → Telegram (built-in integration) |
 | Containerization | Docker |
 | Container Registry | Docker Hub |
 | Infrastructure (IaC) | Terraform |
@@ -103,11 +108,65 @@ If a ticker fetch fails (network error, missing data), that entry includes an `"
 
 ---
 
+## 🧬 Testing
+
+Tests live in `app/test_tracker.py` and run via pytest. All yfinance calls are mocked — the suite has no network dependency and completes in under 2 seconds.
+
+```bash
+pip install -r app/requirements.txt -r app/requirements-dev.txt
+pytest app/test_tracker.py -v
+```
+
+**8 tests covering:**
+
+| Test | What it verifies |
+|------|-----------------|
+| `test_market_summary_returns_200` | `GET /` returns HTTP 200 |
+| `test_market_summary_returns_json_array` | Response is a JSON array with all 4 tickers and correct keys |
+| `test_health_returns_200` | `GET /health` returns HTTP 200 |
+| `test_metrics_returns_200` | `GET /metrics` returns HTTP 200 |
+| `test_metrics_contains_expected_metric_names` | Prometheus output contains `etf_requests_total` and `etf_ticker_fetch_success` |
+| `test_one_failed_ticker_still_returns_200` | One bad ticker fetch does not crash the endpoint |
+| `test_failed_ticker_has_error_field` | Failed ticker gets an `"error"` key with no `"price"` key |
+| `test_other_tickers_unaffected_by_one_failure` | The remaining 3 tickers still return valid price data |
+
+In CI, the test job runs first. If any test fails, the Docker build and Terraform apply are skipped entirely.
+
+---
+
 ## 📊 Monitoring
 
-Application logs can be monitored in real-time via the **Azure Portal Log Stream**.
+### Azure (Production)
 
-The gunicorn server logs each request; the application logs each ticker fetch attempt, success, and failure using Python's standard `logging` module. Fetch errors are visible in the log stream without crashing the service.
+Application logs can be monitored in real-time via the **Azure Portal Log Stream**. The gunicorn server logs each request; the application logs each ticker fetch attempt, success, and failure using Python's standard `logging` module. Fetch errors are visible in the log stream without crashing the service.
+
+### Local Observability Stack
+
+A full local monitoring stack is included for development and demo purposes. It runs via Docker Compose and is **not deployed to Azure**.
+
+```bash
+# Create .env with your bot token first (see .env.example)
+docker compose up --build
+```
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Flask app | http://localhost:8000 | Live ETF market data JSON |
+| Prometheus | http://localhost:9090 | Metrics scraping UI |
+| Grafana | http://localhost:3000 | Dashboard (auto-loads on startup) |
+
+**Prometheus** scrapes `/metrics` every 15 seconds, collecting:
+- `etf_requests_total` — total requests to `/`
+- `etf_request_duration_seconds` — request latency histogram
+- `etf_ticker_fetch_success{ticker="..."}` — gauge per ticker (1 = success, 0 = failure)
+
+**Grafana** is fully provisioned on startup via `grafana/provisioning/` — no manual UI setup needed. The dashboard (`grafana/etf-tracker-dashboard.json`) includes four panels:
+- **Total Requests** — stat panel showing cumulative request count
+- **Ticker Health** — per-ticker stat panel (green = UP, red = DOWN)
+- **P95 Request Latency** — time series of 95th percentile latency
+- **Ticker Fetch Success Over Time** — step-line chart, one line per ticker
+
+**Grafana Alerting** is wired to a Telegram bot via the built-in Telegram integration. If any ticker's fetch success gauge drops to 0 and stays there for more than 1 minute, a real-time alert message is sent to Telegram. Recovery messages are also sent when the ticker comes back up. This was tested and confirmed working end-to-end.
 
 ---
 
@@ -158,16 +217,28 @@ application_stack {
 
 ```
 .
-├── main.tf                   # Core Terraform resources (App Service, VNet, RG)
-├── providers.tf              # AzureRM provider configuration
-├── .gitignore                # Excludes .tfstate, __pycache__, and .terraform/
+├── main.tf                        # Core Terraform resources (App Service, VNet, RG)
+├── providers.tf                   # AzureRM provider + remote backend config
+├── variables.tf                   # Input variables (location, app name, SKU, image)
+├── .gitignore                     # Excludes .tfstate, .env, __pycache__, .terraform/
+├── .env.example                   # Required environment variable keys (no secrets)
+├── docker-compose.yml             # Local observability stack (Flask + Prometheus + Grafana)
+├── prometheus.yml                 # Prometheus scrape config (targets etf-tracker:8000)
 ├── .github/
 │   └── workflows/
-│       └── terraform.yml     # CI/CD pipeline (Docker build + Terraform)
+│       └── terraform.yml          # CI/CD: test → Docker build/push → Terraform
+├── grafana/
+│   ├── etf-tracker-dashboard.json # Auto-provisioned Grafana dashboard (4 panels)
+│   └── provisioning/
+│       ├── datasources/           # Prometheus datasource (auto-wired on startup)
+│       ├── dashboards/            # Dashboard loader config
+│       └── alerting/              # Telegram contact point + alert rule + routing policy
 └── app/
-    ├── Dockerfile            # Container definition (python:3.11-slim + gunicorn)
-    ├── requirements.txt      # Pinned Python dependencies
-    └── tracker.py            # Flask web service (yfinance market data)
+    ├── Dockerfile                 # python:3.11-slim + gunicorn
+    ├── requirements.txt           # Pinned production dependencies
+    ├── requirements-dev.txt       # pytest + pytest-mock (not included in Docker image)
+    ├── tracker.py                 # Flask web service + Prometheus metrics
+    └── test_tracker.py            # pytest suite (8 tests, all yfinance calls mocked)
 ```
 
 ---
