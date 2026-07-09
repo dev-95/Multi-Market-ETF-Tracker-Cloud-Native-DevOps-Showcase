@@ -21,7 +21,7 @@ The focus of this repository is not just the Python application itself, but the 
 | Market Data (JSON) | https://etf-tracker-app-dev-95.azurewebsites.net/ |
 | Health Check | https://etf-tracker-app-dev-95.azurewebsites.net/health |
 
-![Live dashboard showing 7 global market indexes with real-time open/closed status](docs/screenshots/dashboard.png)
+![Live dashboard showing 7 global market indexes with real-time open/closed status](docs/screenshots/Dashboard.png)
 
 ---
 
@@ -173,9 +173,9 @@ docker compose up --build
 
 **Grafana Alerting** is wired to a Telegram bot via the built-in Telegram integration. If any ticker's fetch success gauge drops to 0 and stays there for more than 1 minute, a real-time alert message is sent to Telegram. Recovery messages are also sent when the ticker comes back up. This was tested and confirmed working end-to-end.
 
-![Auto-provisioned Grafana dashboard showing Total Requests, Ticker Health, P95 Request Latency, and Fetch Success Over Time panels](docs/screenshots/grafana.png)
+![Auto-provisioned Grafana dashboard showing Total Requests, Ticker Health, P95 Request Latency, and Fetch Success Over Time panels](docs/screenshots/Grafana%20Dashboard.png)
 
-![Prometheus targets page confirming the etf-tracker scrape target is UP and healthy](docs/screenshots/prometheus.png)
+![Prometheus targets page confirming the etf-tracker scrape target is UP and healthy](docs/screenshots/Prometheus.png)
 
 ---
 
