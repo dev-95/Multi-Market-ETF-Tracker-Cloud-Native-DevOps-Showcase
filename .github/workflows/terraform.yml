@@ -58,7 +58,7 @@ jobs:
           devesh0905/etf-tracker:${{ github.sha }}
 
   terraform:
-    name: 'Terraform Plan & Apply'
+    name: 'Terraform Plan'
     runs-on: ubuntu-latest
     needs: docker
     env:
@@ -85,6 +85,3 @@ jobs:
 
     - name: Terraform Plan
       run: terraform plan
-
-    - name: Terraform Apply
-      run: terraform apply -auto-approve
