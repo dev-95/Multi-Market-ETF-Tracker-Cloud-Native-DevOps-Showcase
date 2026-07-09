@@ -81,7 +81,7 @@ docker push devesh0905/etf-tracker:latest
 
 ```bash
 terraform init
-terraform apply -auto-approve
+terraform apply
 ```
 
 ### Step 3 — Test the running service
@@ -218,7 +218,7 @@ application_stack {
 
 **Challenge:** `terraform.tfstate` (and its backup) were committed to git early in the project. State files can contain sensitive resource identifiers and should never be in version control.
 
-**Solution:** The files were removed from git tracking using `git rm --cached` and `.gitignore` was verified to exclude `*.tfstate` and `*.tfstate.backup`. The files remain on disk for local use but are no longer tracked. The correct long-term fix is a remote backend (e.g. Azure Blob Storage) so state is shared, locked, and never touches the local filesystem.
+**Solution:** The files were removed from git tracking using `git rm --cached` and `.gitignore` was verified to exclude `*.tfstate` and `*.tfstate.backup`. The files remain on disk for local use but are no longer tracked. This project intentionally uses local Terraform state rather than a remote backend, to avoid the cost of an idle cloud storage account for a personal project. A remote backend remains the standard choice for team environments where state needs to be shared and locked.
 
 ---
 
